@@ -1,7 +1,6 @@
 bundle:
   name: sample-react-app
 
-# Force-include the compiled frontend assets even though they are in .gitignore
 sync:
   include:
     - server/dist/**
@@ -23,24 +22,18 @@ targets:
   dev:
     mode: development
     default: true
-    workspace:
-      host: https://<your-dev-workspace-url>
     variables:
       app_name: "sample-react-app-dev"
       environment_name: "dev"
 
   staging:
     mode: production
-    workspace:
-      host: https://<your-staging-workspace-url>
     variables:
       app_name: "sample-react-app-staging"
       environment_name: "staging"
 
   prod:
     mode: production
-    workspace:
-      host: https://<your-prod-workspace-url>
     variables:
       app_name: "sample-react-app-prod"
       environment_name: "prod"
