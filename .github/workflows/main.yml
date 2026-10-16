@@ -1,0 +1,85 @@
+name: Build and Deploy Databricks App
+
+on:
+  push:
+    branches:
+      - dev
+      - staging
+      - main
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Dynamically map git branch or manual input to the target environment
+    environment: >-
+      ${{ 
+        github.event_name == 'workflow_dispatch' && inputs.target_env ||
+        (github.ref_name == 'main' && 'prod' || github.ref_name)
+      }}
+    env:
+      TARGET_ENV: >-
+        ${{ 
+          github.event_name == 'workflow_dispatch' && inputs.target_env ||
+          (github.ref_name == 'main' && 'prod' || github.ref_name)
+        }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: Build React + Vite App
+        env:
+          VITE_ENV: ${{ env.TARGET_ENV }}
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+        run: npm run build
+
+      - name: Verify Build Output Exists
+        run: |
+          if [ ! -f "server/dist/index.html" ]; then
+            echo "Error: server/dist/index.html not found! Check vite.config.ts outDir."
+            exit 1
+          fi
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@main
+
+      - name: Validate Databricks Asset Bundle
+        env:
+          DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: databricks bundle validate -t ${{ env.TARGET_ENV }}
+
+      - name: Create/Update Databricks App Resource & Sync Files
+        env:
+          DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: databricks bundle deploy -t ${{ env.TARGET_ENV }}
+
+      - name: Start/Deploy Application Code on Databricks Apps
+        env:
+          DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: databricks bundle run react_vite_app -t ${{ env.TARGET_ENV }}
