@@ -12,7 +12,7 @@ def get_status():
     return {"status": "Backend is running!"}
 
 # 2. Path to your React Vite build directory
-UI_DIR = "dist"
+UI_DIR = os.path.join(os.path.dirname(__file__), "dist")
 
 # 3. Mount the assets folder explicitly
 # Vite puts bundled JS/CSS in the /assets directory by default

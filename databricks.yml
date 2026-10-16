@@ -1,0 +1,46 @@
+bundle:
+  name: sample-react-app
+
+# Force-include the compiled frontend assets even though they are in .gitignore
+sync:
+  include:
+    - server/dist/**
+
+variables:
+  app_name:
+    description: "Name of the Databricks App"
+  environment_name:
+    description: "Target deployment environment"
+
+resources:
+  apps:
+    react_vite_app:
+      name: ${var.app_name}
+      description: "React + Vite + FastAPI App (${var.environment_name})"
+      source_code_path: ./server
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://<your-dev-workspace-url>
+    variables:
+      app_name: "sample-react-app-dev"
+      environment_name: "dev"
+
+  staging:
+    mode: production
+    workspace:
+      host: https://<your-staging-workspace-url>
+    variables:
+      app_name: "sample-react-app-staging"
+      environment_name: "staging"
+
+  prod:
+    mode: production
+    workspace:
+      host: https://<your-prod-workspace-url>
+    variables:
+      app_name: "sample-react-app-prod"
+      environment_name: "prod"
